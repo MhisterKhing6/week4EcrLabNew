@@ -1,34 +1,23 @@
-name: Push the Docker image to AWS ECR Repo
-on:
-  push:
-    branches:
-      - master
+- name: Checkout repo
+  uses: actions/checkout@v3
 
-jobs:
-  Build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+- name: Configure AWS credentials
+  uses: aws-actions/configure-aws-credentials@v4
+  with:
+    aws-region: us-west-2
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
+- name: Login to Amazon ECR Public
+  id: login-ecr-public
+  uses: aws-actions/amazon-ecr-login@v2
+  with:
+    registry-type: public
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Build, tag, and push the image to Amazon ECR
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.REPO_NAME }} 
-          IMAGE_TAG: kingsleybotchway_image_intro
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+- name: Build, tag, and push docker image to Amazon ECR Public
+  env:
+    REGISTRY: ${{ steps.login-ecr-public.outputs.registry }}
+    REGISTRY_ALIAS: my-ecr-public-registry-alias
+    REPOSITORY: week-4/aws-lab-kingsley-botchway
+    IMAGE_TAG: ${{ github.sha }}
+  run: |
+    docker build -t $REGISTRY/$REGISTRY_ALIAS/$REPOSITORY:$IMAGE_TAG .
+    docker push $REGISTRY/$REGISTRY_ALIAS/$REPOSITORY:$IMAGE_TAG
